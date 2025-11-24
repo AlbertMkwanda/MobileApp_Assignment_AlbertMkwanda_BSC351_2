@@ -11,63 +11,65 @@ import com.studentresultsportal.app.composables.calculateOverallGpa
 import java.io.File
 import java.io.FileOutputStream
 
-fun createCsvReport(context: Context, dao: DataAccessObject): File {
-    val students = dao.getAllStudents()
-    val classes = dao.getAllClasses()
-    val csvFile = File(context.cacheDir, "student_results.csv")
-    csvFile.writer().use {
-        it.append("Student ID,Student Name,Class,Subject,Final Grade,GPA\n")
+fun createCsvReport(context: Context, dao: DataAccessObject, classId: Int): File {
+    val students = dao.getStudentsForClass(classId)
+    val subjects = dao.getSubjectsForClass(classId)
+    val studentResultsFile = File(context.cacheDir, "student_results.csv")
+    studentResultsFile.writer().use {
+        it.append("Student ID,Student Name,Subject,Final Grade,GPA\n")
         for (student in students) {
-            for (studentClass in classes) {
-                val subjects = dao.getSubjectsForStudentInClass(student.id, studentClass.id)
-                val grades = subjects.mapNotNull { subject -> dao.getGradeForStudent(student.id, subject.id, studentClass.id) }
-                for (grade in grades) {
-                    val subject = subjects.find { it.id == grade.subjectId }
+            for (subject in subjects) {
+                val grade = dao.getGradeForStudent(student.id, subject.id, classId)
+                if (grade != null) {
                     val finalGrade = calculateFinalGrade(grade)
                     val gpa = calculateOverallGpa(listOf(grade))
-                    it.append("${student.regNumber},${student.name},${studentClass.name},${subject?.name ?: ""},$finalGrade,$gpa\n")
+                    it.append("${student.regNumber},${student.name},${subject.name},$finalGrade,$gpa\n")
                 }
             }
         }
     }
-    return csvFile
+    return studentResultsFile
 }
 
-fun createPdfReport(context: Context, dao: DataAccessObject): File {
-    val students = dao.getAllStudents()
-    val classes = dao.getAllClasses()
+fun createPdfReport(context: Context, dao: DataAccessObject, classId: Int): File {
+    val students = dao.getStudentsForClass(classId)
+    val subjects = dao.getSubjectsForClass(classId)
     val pdfFile = File(context.cacheDir, "student_results.pdf")
 
     val document = PdfDocument()
-    val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
+    val pageInfo = PdfDocument.PageInfo.Builder(842, 595, 1).create()
     val page = document.startPage(pageInfo)
     val canvas = page.canvas
     val paint = Paint()
 
-    var yPosition = 20f
+    val tableTop = 40f
+    val tableLeft = 20f
+    val tableRight = 822f
+    val rowHeight = 20f
+    var yPosition = tableTop
+
+    // Table Header
+    canvas.drawText("Student Name", tableLeft + 5, yPosition, paint)
+    subjects.forEachIndexed { index, subject ->
+        canvas.drawText(subject.name, tableLeft + 150 + (index * 70), yPosition, paint)
+    }
+    canvas.drawText("Overall GPA", tableLeft + 150 + (subjects.size * 70), yPosition, paint)
+    yPosition += rowHeight
+
+    // Table Rows
     for (student in students) {
-        canvas.drawText("Student: ${student.name} (${student.regNumber})", 10f, yPosition, paint)
-        yPosition += 20f
-
-        for (studentClass in dao.getClassesForStudent(student.id)) {
-            canvas.drawText("  Class: ${studentClass.name}", 10f, yPosition, paint)
-            yPosition += 20f
-
-            val subjects = dao.getSubjectsForStudentInClass(student.id, studentClass.id)
-            val grades = subjects.mapNotNull { subject -> dao.getGradeForStudent(student.id, subject.id, studentClass.id) }
-            val overallGpa = calculateOverallGpa(grades)
-
-            canvas.drawText("    Overall GPA: ${String.format("%.2f", overallGpa)}", 10f, yPosition, paint)
-            yPosition += 20f
-
-            for (grade in grades) {
-                val subject = subjects.find { it.id == grade.subjectId }
+        canvas.drawText(student.name, tableLeft + 5, yPosition, paint)
+        val grades = subjects.mapNotNull { subject -> dao.getGradeForStudent(student.id, subject.id, classId) }
+        subjects.forEachIndexed { index, subject ->
+            val grade = grades.find { it.subjectId == subject.id }
+            if (grade != null) {
                 val finalGrade = calculateFinalGrade(grade)
-                canvas.drawText("      ${subject?.name ?: ""}: ${String.format("%.2f", finalGrade)}", 10f, yPosition, paint)
-                yPosition += 20f
+                canvas.drawText(String.format("%.2f", finalGrade), tableLeft + 150 + (index * 70), yPosition, paint)
             }
         }
-        yPosition += 20f
+        val overallGpa = calculateOverallGpa(grades)
+        canvas.drawText(String.format("%.2f", overallGpa), tableLeft + 150 + (subjects.size * 70), yPosition, paint)
+        yPosition += rowHeight
     }
 
     document.finishPage(page)

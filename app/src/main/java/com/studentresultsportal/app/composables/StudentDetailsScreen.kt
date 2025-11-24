@@ -1,6 +1,10 @@
 package com.studentresultsportal.app.composables
 
+import android.content.Context
+import android.content.Intent
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,7 +13,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.studentresultsportal.app.Class
 import com.studentresultsportal.app.DataAccessObject
@@ -20,22 +27,52 @@ import com.studentresultsportal.app.calculateFinalGrade
 @Composable
 fun StudentDetailsScreen(studentId: Int, dao: DataAccessObject) {
     val studentClasses = dao.getClassesForStudent(studentId)
+    val context = LocalContext.current
 
     LazyColumn(modifier = Modifier.padding(16.dp)) {
         items(studentClasses) { studentClass ->
-            StudentClassCard(studentClass = studentClass, studentId = studentId, dao = dao)
+            StudentClassCard(studentClass = studentClass, studentId = studentId, dao = dao) {
+                shareStudentResults(context, it)
+            }
         }
     }
 }
 
 @Composable
-fun StudentClassCard(studentClass: Class, studentId: Int, dao: DataAccessObject) {
+fun StudentClassCard(
+    studentClass: Class, 
+    studentId: Int, 
+    dao: DataAccessObject, 
+    onLongPress: (String) -> Unit
+) {
     val subjects = dao.getSubjectsForStudentInClass(studentId, studentClass.id)
     val grades = subjects.map { dao.getGradeForStudent(studentId, it.id, studentClass.id) }
     val overallGpa = calculateOverallGpa(grades.filterNotNull())
+    val student = dao.getStudentById(studentId)
+
+    val shareText = remember(student, studentClass, subjects, grades) {
+        buildString {
+            append("Student: ${student?.name} (${student?.regNumber})\n")
+            append("Class: ${studentClass.name}\n")
+            append("--------------------\n")
+            subjects.forEach { subject ->
+                val grade = grades.find { it?.subjectId == subject.id }
+                val finalGrade = grade?.let { calculateFinalGrade(it) }
+                append("${subject.name}: ${finalGrade?.let { "%.2f".format(it) } ?: "-"}\n")
+            }
+            append("\nOverall GPA: ${"%.2f".format(overallGpa)}\n")
+        }
+    }
 
     Card(
-        modifier = Modifier.padding(vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = { onLongPress(shareText) }
+                )
+            },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -74,4 +111,14 @@ fun gradeToGpa(grade: Float): Float {
         grade >= 40 -> 1.0f
         else -> 0.0f
     }
+}
+
+private fun shareStudentResults(context: Context, shareText: String) {
+    val shareIntent = Intent().apply {
+        action = Intent.ACTION_SEND
+        putExtra(Intent.EXTRA_TEXT, shareText)
+        type = "text/plain"
+        setPackage("com.whatsapp")
+    }
+    context.startActivity(Intent.createChooser(shareIntent, "Share Student Results"))
 }

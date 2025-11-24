@@ -27,6 +27,15 @@ fun calculateFinalGrade(grade: Grade): Float {
     val midSem = grade.midSemScore ?: 0f
     val exam = grade.examScore ?: 0f
 
-    // Assuming weights: Assignment 1 (10%), Assignment 2 (10%), Mid-Sem (30%), Exam (50%)
-    return (assignment1 * 0.1f) + (assignment2 * 0.1f) + (midSem * 0.3f) + (exam * 0.5f)
+    // Continuous assessment is out of 90 (20 + 20 + 50)
+    val continuousAssessmentScore = assignment1 + assignment2 + midSem
+    // Final exam is out of 100
+    val examScore = exam
+
+    // Calculate 40% of the continuous assessment score (normalized to 90)
+    val continuousAssessmentPart = (continuousAssessmentScore / 90f) * 40f
+    // Calculate 60% of the final exam score (normalized to 100)
+    val examPart = (examScore / 100f) * 60f
+
+    return continuousAssessmentPart + examPart
 }
