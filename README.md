@@ -8,7 +8,7 @@
 
 A standalone, offline-first Android application designed for lecturers to efficiently manage student grades, class lists, and subject details directly on their mobile device. This app replaces traditional spreadsheets and paper-based systems with a secure, dedicated, and easy-to-use digital gradebook.
 
-## ✨ Core Features
+## Core Features
 
 The application is designed around the core needs of a lecturer for robust and accessible record-keeping.
 
@@ -30,7 +30,7 @@ The application is designed around the core needs of a lecturer for robust and a
 *   **Data Visualization:**
     *   A dashboard provides an at-a-glance overview of class performance distribution using charts.
 
-## 🛠️ Technical Implementation
+## Technical Implementation
 
 This project is built using modern Android development practices and a clean architectural approach.
 
@@ -62,16 +62,17 @@ The local SQLite database is structured with several interconnected tables to ma
 *   **`MainActivity.kt`**: The main entry point of the app. It sets up the navigation host, manages state for dialogs, and orchestrates the overall UI flow.
 *   **Composables (`/composables` package)**: The UI is broken down into modular and reusable screens (`ClassScreen`, `SubjectScreen`, `StudentScreen`, `Dashboard`), each responsible for a specific feature set.
 
-## 🚀 How to Build and Run
+##  How to Build and Run
 
 1.  Clone this repository.
 2.  Open the project in Android Studio (latest stable version recommended).
 3.  Let Gradle sync and download the required dependencies.
 4.  Build and run the application on an Android emulator or a physical device (API 26+).
 
-## 🔮 Future Enhancements
+## Future Enhancements
 
 *   **Data Import/Export:** Add functionality to import class lists from CSV files and export grade sheets as CSV or PDF.
 *   **Data Backup & Restore:** Implement a feature to back up the SQLite database to cloud storage (e.g., Google Drive) and restore it.
 *   **Advanced Weighting:** Allow lecturers to define custom weightings for each assessment component directly within the app.
 *   **Modernize Database Access:** Migrate from the manual `DatabaseHelper` and `DAO` to **Room Persistence Library** for compile-time SQL query verification, less boilerplate code, and easier integration with Kotlin Coroutines.
+
